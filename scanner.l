@@ -1,43 +1,50 @@
 %{
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
+#include "parser.tab.h"
+
+extern YYSTYPE yylval;
+extern void open_file(char *filename);
 
 int line_number = 1; // Line counter
 %}
 
+%option yylineno
+
 %%
-"else"      { printf("ELSE "); }
-"if"        { printf("IF "); }
-"int"       { printf("INT "); }
-"return"    { printf("RETURN "); }
-"void"      { printf("VOID "); }
-"while"     { printf("WHILE "); }
+"else"      { printf("ELSE "); return ELSE; }
+"if"        { printf("IF "); return IF; }
+"int"       { printf("INT "); return INT; }
+"return"    { printf("RETURN "); return RETURN; }
+"void"      { printf("VOID "); return VOID; }
+"while"     { printf("WHILE "); return WHILE; }
 
-"+"         { printf("PLUS "); }
-"-"         { printf("MINUS "); }
-"*"         { printf("TIMES "); }
-"/"         { printf("DIV "); }
-"<="        { printf("LEQ "); }
-"<"         { printf("LT "); }
-">="        { printf("GEQ "); }
-">"         { printf("GT "); }
-"=="        { printf("EQ "); }
-"!="        { printf("NEQ "); }
-"="         { printf("ASSIGN "); }
+"+"         { printf("PLUS "); return PLUS; }
+"-"         { printf("MINUS "); return MINUS; }
+"*"         { printf("TIMES "); return TIMES; }
+"/"         { printf("DIV "); return DIV; }
+"<="        { printf("LEQ "); return LEQ; }
+"<"         { printf("LT "); return LT; }
+">="        { printf("GEQ "); return GEQ; }
+">"         { printf("GT "); return GT; }
+"=="        { printf("EQ "); return EQ; }
+"!="        { printf("NEQ "); return NEQ; }
+"="         { printf("ASSIGN "); return ASSIGN; }
 
-","         { printf("COMMA "); }
-";"         { printf("SEMICOLON "); }
-"\("        { printf("LPAREN "); }
-"\)"        { printf("RPAREN "); }
-"\["        { printf("LBRACKET "); }
-"\]"        { printf("RBRACKET "); }
-"\{"        { printf("LBRACE "); }
-"\}"        { printf("RBRACE "); }
+","         { printf("COMMA "); return COMMA; }
+";"         { printf("SEMICOLON "); return SEMICOLON; }
+"("         { printf("LPAREN "); return LPAREN; }
+")"         { printf("RPAREN "); return RPAREN; }
+"["         { printf("LBRACKET "); return LBRACKET; }
+"]"         { printf("RBRACKET "); return RBRACKET; }
+"{"         { printf("LBRACE "); return LBRACE; }
+"}"         { printf("RBRACE "); return RBRACE; }
 
-[0-9]+      { printf("NUMBER(%s) ", yytext); }
+[0-9]+      { printf("NUMBER(%s) ", yytext); yylval.integer = atoi(yytext); return NUMBER; }
 
 [a-zA-Z][a-zA-Z0-9]* {
-    printf("ID(%s) ", yytext);
+    printf("ID(%s) ", yytext); yylval.string = strdup(yytext); return ID;
 }
 
 [ \t]+      { /* Ignore spaces and tabs */ }
@@ -51,20 +58,13 @@ int line_number = 1; // Line counter
 
 %%
 
-int main(int argc, char **argv) {
-    // Check if an input file is provided
-    if (argc > 1) {
-        FILE *input = fopen(argv[1], "r");
-        if (!input) {
-            perror("Error opening file");
-            return 1;
-        }
-        yyin = input;
+void open_file(char *filename) {
+    FILE *input = fopen(filename, "r");
+    if (!input) {
+        perror("Error opening file");
+        exit(1);
     }
-
-    // Start lexical analysis
-    yylex();
-    return 0;
+    yyin = input;
 }
 
 int yywrap() {
