@@ -4,3 +4,4 @@ temp
 lex.yy.c
 *.tab.*
 Makefile
+cminus
