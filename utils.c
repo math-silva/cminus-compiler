@@ -164,3 +164,9 @@ void printTree(treeNode * tree) {
         tree = tree->sibling;
     }
 }
+
+void print_error(int line, int col, const char *type, const char *msg) {
+    fprintf(stderr, "\033[1;33m%s:%d:%d:\033[0m \033[1;31m%s:\033[0m \033[1;37m%s\033[0m\n",
+            filename ? filename : "stdin", line, col, type, msg);
+    exit(1);
+}

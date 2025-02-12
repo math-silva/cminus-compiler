@@ -15,6 +15,8 @@ treeNode * parse();
 
 static treeNode* tree;
 static char* name;
+
+char* filename = NULL;
 %}
 
 
@@ -291,8 +293,9 @@ arg_list: arg_list COMMA expression
 
 void yyerror(char *msg) {
     extern char *yytext;
-    printf("\nSyntatic error at line %d: Unexpected error near '%s'\n", yylineno, yytext);
-    exit(1);
+    char error_msg[50];
+    snprintf(error_msg, sizeof(error_msg), "unexpected token '\033[1;32m%s\033[0m'", yytext);
+    print_error(yylineno, column, "syntatical error", error_msg);
 }
 
 treeNode * parse() {
@@ -300,12 +303,13 @@ treeNode * parse() {
     return tree;
 }
 
-void openFile(char *filename) {
-    FILE* file = fopen(filename, "r");
+void openFile(char *fname) {
+    FILE* file = fopen(fname, "r");
     if (file == NULL) {
-        printf("Cannot open file %s\n", filename);
+        printf("Cannot open file %s\n", fname);
         exit(1);
     }
     extern FILE* yyin;
     yyin = file;
+    filename = fname;
 }

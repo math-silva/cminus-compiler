@@ -38,4 +38,9 @@ typedef struct treeNode {
 
 #include "parser.tab.h"
 
+extern char *filename;
+extern int column;
+
+void print_error(int line, int col, const char *type, const char *msg);
+
 #endif

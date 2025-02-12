@@ -1,60 +1,61 @@
 %{
-#include <stdio.h>
-#include <string.h>
 #include "globals.h"
-
-#include "utils.h"
-
-extern YYSTYPE yylval;
-
-int line_number = 1; // Line counter
+extern int yylineno;
+int column = 0;
 %}
 
 %option yylineno
 
 %%
-"else"      { return ELSE; }
-"if"        { return IF; }
-"int"       { return INT; }
-"return"    { return RETURN; }
-"void"      { return VOID; }
-"while"     { return WHILE; }
 
-"+"         { return PLUS; }
-"-"         { return MINUS; }
-"*"         { return TIMES; }
-"/"         { return DIV; }
-"<="        { return LEQ; }
-"<"         { return LT; }
-">="        { return GEQ; }
-">"         { return GT; }
-"=="        { return EQ; }
-"!="        { return NEQ; }
-"="         { return ASSIGN; }
+"else"      { column += yyleng; return ELSE; }
+"if"        { column += yyleng; return IF; }
+"int"       { column += yyleng; return INT; }
+"return"    { column += yyleng; return RETURN; }
+"void"      { column += yyleng; return VOID; }
+"while"     { column += yyleng; return WHILE; }
 
-","         { return COMMA; }
-";"         { return SEMICOLON; }
-"("         { return LPAREN; }
-")"         { return RPAREN; }
-"["         { return LBRACKET; }
-"]"         { return RBRACKET; }
-"{"         { return LBRACE; }
-"}"         { return RBRACE; }
+"+"         { column++; return PLUS; }
+"-"         { column++; return MINUS; }
+"*"         { column++; return TIMES; }
+"/"         { column++; return DIV; }
+"<="        { column += 2; return LEQ; }
+"<"         { column++; return LT; }
+">="        { column += 2; return GEQ; }
+">"         { column++; return GT; }
+"=="        { column += 2; return EQ; }
+"!="        { column += 2; return NEQ; }
+"="         { column++; return ASSIGN; }
 
-[0-9]+      { yylval.integer = atoi(yytext); return NUMBER; }
+","         { column++; return COMMA; }
+";"         { column++; return SEMICOLON; }
+"("         { column++; return LPAREN; }
+")"         { column++; return RPAREN; }
+"["         { column++; return LBRACKET; }
+"]"         { column++; return RBRACKET; }
+"{"         { column++; return LBRACE; }
+"}"         { column++; return RBRACE; }
+
+[0-9]+      { column += yyleng; yylval.integer = atoi(yytext); return NUMBER; }
 
 [a-zA-Z][a-zA-Z0-9]* {
-    yylval.string = strdup(yytext); return ID;
+    column += yyleng;
+    yylval.string = strdup(yytext);
+    return ID;
 }
 
-[ \t]+      { /* Ignore spaces and tabs */ }
+[ \t]+      { column += yyleng; }
 
-\n          { line_number++; }
+\n          { column = 0; }
 
-"/*"([^*]|\*+[^*/])*\*+\/ { /* Ignore block comments */ }
-"//"[^\n]* { /* Ignore single-line comments */ }
+"/*"([^*]|\*+[^*/])*\*+\/ { column += yyleng; }
+"//"[^\n]* { column += yyleng; }
 
-.           { printf("Unknown character: %c\n", yytext[0]); }
+.           { 
+    char error_msg[50];
+    snprintf(error_msg, sizeof(error_msg), "unknown character '\033[1;32m%c\033[0m'", yytext[0]);
+    print_error(yylineno, column, "lexycal error", error_msg);
+}
 
 %%
 
