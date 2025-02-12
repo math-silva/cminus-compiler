@@ -1,0 +1,20 @@
+#include "globals.h"
+#include "parser.tab.h"
+#include "utils.h"
+
+void openFile(char *filename);
+treeNode *parse();
+
+int main(int argc, char *argv[]) {
+    printf("C- Compiler\n");
+    if (argc != 2) {
+        printf("Usage: %s <filename>\n", argv[0]);
+        exit(1);
+    }
+    openFile(argv[1]);
+    treeNode* tree = parse();
+    if (tree != NULL) {
+        printTree(tree);
+    }
+    return 0;
+}

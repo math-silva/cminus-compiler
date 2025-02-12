@@ -1,15 +1,25 @@
 %{
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
-void open_file(char *filename);
+#include "globals.h"
+#include "utils.h"
+
 void yyerror(char *);
 
 extern int yylineno;
 extern int yylex(void);
+
+treeNode * parse();
+
+static treeNode* tree;
+static char* name;
 %}
 
+
 %union {
+    treeNode *node;
     int integer;
     char* string;
 }
@@ -25,6 +35,14 @@ extern int yylex(void);
 %left LEQ LT GEQ GT EQ NEQ
 %right ASSIGN
 
+%type <node> program
+%type <node> expression factor var call simple_expression
+%type <node> additive_expression term args arg_list param_list param params declaration_list
+%type <node> declaration var_declaration type_specifier fun_declaration compound_stmt local_declarations
+%type <node> statement_list statement selection_stmt iteration_stmt return_stmt expression_stmt
+%type <node> mult add rel
+
+%nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
 
 %start program
@@ -32,9 +50,14 @@ extern int yylex(void);
 %%
 
 program: declaration_list
+    {
+        $$ = $1;
+        tree = $1;
+    }
     ;
 
 declaration_list: declaration_list declaration
+    { $$ = addSibling($1, $2); }
     | declaration
     ;
 
@@ -43,36 +66,87 @@ declaration: var_declaration
     ;
 
 var_declaration: type_specifier ID SEMICOLON
+    {
+        $$ = newStmtNode(VarDeclK);
+        $$->type = $1->type;
+        $$->attr.name = strdup($2);
+    }
     | type_specifier ID LBRACKET NUMBER RBRACKET SEMICOLON
+    {
+        $$ = newStmtNode(VarDeclK);
+        $$->type = $1->type;
+        $$->attr.name = strdup($2);
+        treeNode *size = newExpNode(ConstK);
+        size->attr.val = $4;
+        $$->children[0] = size;
+    }
     ;
 
-type_specifier: INT | VOID
+type_specifier: INT 
+    {
+        $$ = newExpNode(IdK);
+        $$->type = Integer;
+    }
+    | VOID
+    {
+        $$ = newExpNode(IdK);
+        $$->type = Void;
+    }
     ;
 
 fun_declaration: type_specifier ID LPAREN params RPAREN compound_stmt
+    {
+        $$ = newStmtNode(FunDeclK);
+        $$->type = $1->type;
+        $$->attr.name = strdup($2);
+        $$->children[0] = $4;
+        $$->children[1] = $6;
+    }
     ;
 
 params: param_list
     | VOID
+    {
+        $$ = newStmtNode(ParamK);
+        $$->type = Void;
+    }
     ;
 
 param_list: param_list COMMA param
+    { $$ = addSibling($1, $3); }
     | param
     ;
 
 param: type_specifier ID
+    {
+        $$ = newStmtNode(ParamK);
+        $$->type = $1->type;
+        $$->attr.name = strdup($2);
+    }
     | type_specifier ID LBRACKET RBRACKET
+    {
+        $$ = newStmtNode(ParamK);
+        $$->type = $1->type;
+        $$->attr.name = strdup($2);
+    }
     ;
 
 compound_stmt: LBRACE local_declarations statement_list RBRACE
+    {
+        $$ = newStmtNode(CompoundK);
+        $$->children[0] = $2;
+        $$->children[1] = $3;
+    }
     ;
 
 local_declarations: local_declarations var_declaration
-    |
+    { $$ = addSibling($1, $2); }
+    | { $$ = NULL; }
     ;
 
 statement_list: statement_list statement
-    |
+    { $$ = addSibling($1, $2); }
+    | { $$ = NULL; }
     ;
 
 statement: expression_stmt
@@ -83,79 +157,155 @@ statement: expression_stmt
     ;
 
 expression_stmt: expression SEMICOLON
-    | SEMICOLON
+    | SEMICOLON { $$ = NULL; }
     ;
 
-selection_stmt: IF LPAREN expression RPAREN statement
+selection_stmt: IF LPAREN expression RPAREN statement %prec LOWER_THAN_ELSE
+    {
+        $$ = newStmtNode(IfK);
+        $$->children[0] = $3;
+        $$->children[1] = $5;
+    }
     | IF LPAREN expression RPAREN statement ELSE statement
+    {
+        $$ = newStmtNode(IfK);
+        $$->children[0] = $3;
+        $$->children[1] = $5;
+        $$->children[2] = $7;
+    }
     ;
 
 iteration_stmt: WHILE LPAREN expression RPAREN statement
+    {
+        $$ = newStmtNode(WhileK);
+        $$->children[0] = $3;
+        $$->children[1] = $5;
+    }
     ;
 
 return_stmt: RETURN SEMICOLON
+    { $$ = newStmtNode(ReturnK); }
     | RETURN expression SEMICOLON
+    {
+        $$ = newStmtNode(ReturnK);
+        $$->children[0] = $2;
+    }
     ;
 
 expression: var ASSIGN expression
+    {
+        $$ = newStmtNode(AssignK);
+        $$->children[0] = $1;
+        $$->children[1] = $3;
+    }
     | simple_expression
     ;
 
 var: ID
+    {
+        $$ = newExpNode(IdK);
+        $$->attr.name = strdup($1);
+    }
     | ID LBRACKET expression RBRACKET
+    {
+        $$ = newExpNode(IdK);
+        $$->attr.name = strdup($1);
+        $$->children[0] = $3;
+    }
     ;
 
-simple_expression: additive_expression relop additive_expression
+simple_expression: additive_expression rel additive_expression
+    {
+        $$ = newExpNode(OpK);
+        $$->attr.op = $2->attr.op;
+        $$->children[0] = $1;
+        $$->children[1] = $3;
+    }
     | additive_expression
     ;
 
-relop: LEQ | LT | GEQ | GT | EQ | NEQ
+rel: LEQ { $$ = newExpNode(OpK); $$->attr.op = LEQ; } 
+    | LT { $$ = newExpNode(OpK); $$->attr.op = LT; } 
+    | GEQ { $$ = newExpNode(OpK); $$->attr.op = GEQ; } 
+    | GT { $$ = newExpNode(OpK); $$->attr.op = GT; }
+    | EQ { $$ = newExpNode(OpK); $$->attr.op = EQ; }
+    | NEQ { $$ = newExpNode(OpK); $$->attr.op = NEQ; }
     ;
 
-additive_expression: additive_expression addop term
+additive_expression: additive_expression add term
+    {
+        $$ = newExpNode(OpK);
+        $$->attr.op = $2->attr.op;
+        $$->children[0] = $1;
+        $$->children[1] = $3;
+    }
     | term
     ;
 
-addop: PLUS | MINUS
+add: PLUS { $$ = newExpNode(OpK); $$->attr.op = PLUS; } 
+    | MINUS { $$ = newExpNode(OpK); $$->attr.op = MINUS; }
     ;
 
-term: term mulop factor
+term: term mult factor
+    {
+        $$ = newExpNode(OpK);
+        $$->attr.op = $2->attr.op;
+        $$->children[0] = $1;
+        $$->children[1] = $3;
+    }
     | factor
     ;
 
-mulop: TIMES | DIV
+mult: TIMES { $$ = newExpNode(OpK); $$->attr.op = TIMES; } 
+    | DIV { $$ = newExpNode(OpK); $$->attr.op = DIV; }
     ;
 
-factor: LPAREN expression RPAREN
+factor: LPAREN expression RPAREN { $$ = $2; }
     | var
     | call
     | NUMBER
+    {
+        $$ = newExpNode(ConstK);
+        $$->attr.val = $1;
+    }
     ;
 
 call: ID LPAREN args RPAREN
+    {
+        $$ = newExpNode(CallK);
+        $$->attr.name = strdup($1);
+        $$->children[0] = $3;
+    }
     ;
 
 args: arg_list
-    | 
+    | { $$ = NULL; }
     ;
 
 arg_list: arg_list COMMA expression
+    { $$ = addSibling($1, $3); }
     | expression
     ;
 
 %%
 
-int main(int argc, char **argv) {
-    if (argc < 2) {
-        fprintf(stderr, "%s <input_file>\n", argv[0]);
-        return 1;
-    }
-    open_file(argv[1]);
-    return yyparse();
-}
-
 void yyerror(char *msg) {
     extern char *yytext;
     printf("\nSyntatic error at line %d: Unexpected error near '%s'\n", yylineno, yytext);
     exit(1);
+}
+
+treeNode * parse() {
+    yyparse();
+    return tree;
+}
+
+void openFile(char *filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Cannot open file %s\n", filename);
+        exit(1);
+    }
+    extern FILE* yyin;
+    yyin = file;
 }
