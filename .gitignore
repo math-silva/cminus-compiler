@@ -1,2 +1,6 @@
 temp
-scanner
+*.o
+*.output
+lex.yy.c
+*.tab.*
+Makefile
