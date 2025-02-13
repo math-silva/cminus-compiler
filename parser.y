@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "globals.h"
+#include "symtab.h"
 #include "utils.h"
 
 void yyerror(char *);
@@ -17,6 +18,8 @@ static treeNode* tree;
 static char* name;
 
 char* filename = NULL;
+char current_scope[100] = "global";
+
 %}
 
 
@@ -72,6 +75,7 @@ var_declaration: type_specifier ID SEMICOLON
         $$ = newStmtNode(VarDeclK);
         $$->type = $1->type;
         $$->attr.name = strdup($2);
+        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     | type_specifier ID LBRACKET NUMBER RBRACKET SEMICOLON
     {
@@ -81,6 +85,7 @@ var_declaration: type_specifier ID SEMICOLON
         treeNode *size = newExpNode(ConstK);
         size->attr.val = $4;
         $$->children[0] = size;
+        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     ;
 
@@ -103,6 +108,8 @@ fun_declaration: type_specifier ID LPAREN params RPAREN compound_stmt
         $$->attr.name = strdup($2);
         $$->children[0] = $4;
         $$->children[1] = $6;
+        insert_symbol($2, "global", FUN, ($1->type == Integer ? INT_T : VOID_T), yylineno);
+        strcpy(current_scope, $2);
     }
     ;
 
@@ -124,12 +131,14 @@ param: type_specifier ID
         $$ = newStmtNode(ParamK);
         $$->type = $1->type;
         $$->attr.name = strdup($2);
+        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     | type_specifier ID LBRACKET RBRACKET
     {
         $$ = newStmtNode(ParamK);
         $$->type = $1->type;
         $$->attr.name = strdup($2);
+        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     ;
 

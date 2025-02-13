@@ -74,6 +74,7 @@
 #include <stdlib.h>
 
 #include "globals.h"
+#include "symtab.h"
 #include "utils.h"
 
 void yyerror(char *);
@@ -87,8 +88,10 @@ static treeNode* tree;
 static char* name;
 
 char* filename = NULL;
+char current_scope[100] = "global";
 
-#line 92 "parser.c"
+
+#line 95 "parser.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -565,13 +568,13 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    54,    54,    61,    63,    66,    67,    70,    76,    87,
-      92,    99,   109,   110,   117,   119,   122,   128,   136,   144,
-     146,   149,   151,   154,   155,   156,   157,   158,   161,   162,
-     165,   171,   180,   188,   190,   197,   203,   206,   211,   219,
-     226,   229,   230,   231,   232,   233,   234,   237,   244,   247,
-     248,   251,   258,   261,   262,   265,   266,   267,   268,   275,
-     283,   284,   287,   289
+       0,    57,    57,    64,    66,    69,    70,    73,    80,    92,
+      97,   104,   116,   117,   124,   126,   129,   136,   145,   153,
+     155,   158,   160,   163,   164,   165,   166,   167,   170,   171,
+     174,   180,   189,   197,   199,   206,   212,   215,   220,   228,
+     235,   238,   239,   240,   241,   242,   243,   246,   253,   256,
+     257,   260,   267,   270,   271,   274,   275,   276,   277,   284,
+     292,   293,   296,   298
 };
 #endif
 
@@ -1201,32 +1204,33 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: declaration_list  */
-#line 55 "parser.y"
+#line 58 "parser.y"
     {
         (yyval.node) = (yyvsp[0].node);
         tree = (yyvsp[0].node);
     }
-#line 1210 "parser.c"
+#line 1213 "parser.c"
     break;
 
   case 3: /* declaration_list: declaration_list declaration  */
-#line 62 "parser.y"
+#line 65 "parser.y"
     { (yyval.node) = addSibling((yyvsp[-1].node), (yyvsp[0].node)); }
-#line 1216 "parser.c"
+#line 1219 "parser.c"
     break;
 
   case 7: /* var_declaration: type_specifier ID SEMICOLON  */
-#line 71 "parser.y"
+#line 74 "parser.y"
     {
         (yyval.node) = newStmtNode(VarDeclK);
         (yyval.node)->type = (yyvsp[-2].node)->type;
         (yyval.node)->attr.name = strdup((yyvsp[-1].string));
+        insert_symbol((yyvsp[-1].string), current_scope, VAR, ((yyvsp[-2].node)->type == Integer ? INT_T : VOID_T), yylineno);
     }
-#line 1226 "parser.c"
+#line 1230 "parser.c"
     break;
 
   case 8: /* var_declaration: type_specifier ID LBRACKET NUMBER RBRACKET SEMICOLON  */
-#line 77 "parser.y"
+#line 81 "parser.y"
     {
         (yyval.node) = newStmtNode(VarDeclK);
         (yyval.node)->type = (yyvsp[-5].node)->type;
@@ -1234,322 +1238,327 @@ yyreduce:
         treeNode *size = newExpNode(ConstK);
         size->attr.val = (yyvsp[-2].integer);
         (yyval.node)->children[0] = size;
+        insert_symbol((yyvsp[-4].string), current_scope, VAR, ((yyvsp[-5].node)->type == Integer ? INT_T : VOID_T), yylineno);
     }
-#line 1239 "parser.c"
+#line 1244 "parser.c"
     break;
 
   case 9: /* type_specifier: INT  */
-#line 88 "parser.y"
+#line 93 "parser.y"
     {
         (yyval.node) = newExpNode(IdK);
         (yyval.node)->type = Integer;
     }
-#line 1248 "parser.c"
+#line 1253 "parser.c"
     break;
 
   case 10: /* type_specifier: VOID  */
-#line 93 "parser.y"
+#line 98 "parser.y"
     {
         (yyval.node) = newExpNode(IdK);
         (yyval.node)->type = Void;
     }
-#line 1257 "parser.c"
+#line 1262 "parser.c"
     break;
 
   case 11: /* fun_declaration: type_specifier ID LPAREN params RPAREN compound_stmt  */
-#line 100 "parser.y"
+#line 105 "parser.y"
     {
         (yyval.node) = newStmtNode(FunDeclK);
         (yyval.node)->type = (yyvsp[-5].node)->type;
         (yyval.node)->attr.name = strdup((yyvsp[-4].string));
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[0].node);
+        insert_symbol((yyvsp[-4].string), "global", FUN, ((yyvsp[-5].node)->type == Integer ? INT_T : VOID_T), yylineno);
+        strcpy(current_scope, (yyvsp[-4].string));
     }
-#line 1269 "parser.c"
+#line 1276 "parser.c"
     break;
 
   case 13: /* params: VOID  */
-#line 111 "parser.y"
+#line 118 "parser.y"
     {
         (yyval.node) = newStmtNode(ParamK);
         (yyval.node)->type = Void;
     }
-#line 1278 "parser.c"
+#line 1285 "parser.c"
     break;
 
   case 14: /* param_list: param_list COMMA param  */
-#line 118 "parser.y"
+#line 125 "parser.y"
     { (yyval.node) = addSibling((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1284 "parser.c"
+#line 1291 "parser.c"
     break;
 
   case 16: /* param: type_specifier ID  */
-#line 123 "parser.y"
+#line 130 "parser.y"
     {
         (yyval.node) = newStmtNode(ParamK);
         (yyval.node)->type = (yyvsp[-1].node)->type;
         (yyval.node)->attr.name = strdup((yyvsp[0].string));
+        insert_symbol((yyvsp[0].string), current_scope, VAR, ((yyvsp[-1].node)->type == Integer ? INT_T : VOID_T), yylineno);
     }
-#line 1294 "parser.c"
+#line 1302 "parser.c"
     break;
 
   case 17: /* param: type_specifier ID LBRACKET RBRACKET  */
-#line 129 "parser.y"
+#line 137 "parser.y"
     {
         (yyval.node) = newStmtNode(ParamK);
         (yyval.node)->type = (yyvsp[-3].node)->type;
         (yyval.node)->attr.name = strdup((yyvsp[-2].string));
+        insert_symbol((yyvsp[-2].string), current_scope, VAR, ((yyvsp[-3].node)->type == Integer ? INT_T : VOID_T), yylineno);
     }
-#line 1304 "parser.c"
+#line 1313 "parser.c"
     break;
 
   case 18: /* compound_stmt: LBRACE local_declarations statement_list RBRACE  */
-#line 137 "parser.y"
+#line 146 "parser.y"
     {
         (yyval.node) = newStmtNode(CompoundK);
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[-1].node);
     }
-#line 1314 "parser.c"
+#line 1323 "parser.c"
     break;
 
   case 19: /* local_declarations: local_declarations var_declaration  */
-#line 145 "parser.y"
+#line 154 "parser.y"
     { (yyval.node) = addSibling((yyvsp[-1].node), (yyvsp[0].node)); }
-#line 1320 "parser.c"
+#line 1329 "parser.c"
     break;
 
   case 20: /* local_declarations: %empty  */
-#line 146 "parser.y"
+#line 155 "parser.y"
       { (yyval.node) = NULL; }
-#line 1326 "parser.c"
+#line 1335 "parser.c"
     break;
 
   case 21: /* statement_list: statement_list statement  */
-#line 150 "parser.y"
+#line 159 "parser.y"
     { (yyval.node) = addSibling((yyvsp[-1].node), (yyvsp[0].node)); }
-#line 1332 "parser.c"
+#line 1341 "parser.c"
     break;
 
   case 22: /* statement_list: %empty  */
-#line 151 "parser.y"
+#line 160 "parser.y"
       { (yyval.node) = NULL; }
-#line 1338 "parser.c"
+#line 1347 "parser.c"
     break;
 
   case 29: /* expression_stmt: SEMICOLON  */
-#line 162 "parser.y"
+#line 171 "parser.y"
                 { (yyval.node) = NULL; }
-#line 1344 "parser.c"
+#line 1353 "parser.c"
     break;
 
   case 30: /* selection_stmt: IF LPAREN expression RPAREN statement  */
-#line 166 "parser.y"
+#line 175 "parser.y"
     {
         (yyval.node) = newStmtNode(IfK);
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[0].node);
     }
-#line 1354 "parser.c"
+#line 1363 "parser.c"
     break;
 
   case 31: /* selection_stmt: IF LPAREN expression RPAREN statement ELSE statement  */
-#line 172 "parser.y"
+#line 181 "parser.y"
     {
         (yyval.node) = newStmtNode(IfK);
         (yyval.node)->children[0] = (yyvsp[-4].node);
         (yyval.node)->children[1] = (yyvsp[-2].node);
         (yyval.node)->children[2] = (yyvsp[0].node);
     }
-#line 1365 "parser.c"
+#line 1374 "parser.c"
     break;
 
   case 32: /* iteration_stmt: WHILE LPAREN expression RPAREN statement  */
-#line 181 "parser.y"
+#line 190 "parser.y"
     {
         (yyval.node) = newStmtNode(WhileK);
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[0].node);
     }
-#line 1375 "parser.c"
+#line 1384 "parser.c"
     break;
 
   case 33: /* return_stmt: RETURN SEMICOLON  */
-#line 189 "parser.y"
+#line 198 "parser.y"
     { (yyval.node) = newStmtNode(ReturnK); }
-#line 1381 "parser.c"
+#line 1390 "parser.c"
     break;
 
   case 34: /* return_stmt: RETURN expression SEMICOLON  */
-#line 191 "parser.y"
+#line 200 "parser.y"
     {
         (yyval.node) = newStmtNode(ReturnK);
         (yyval.node)->children[0] = (yyvsp[-1].node);
     }
-#line 1390 "parser.c"
+#line 1399 "parser.c"
     break;
 
   case 35: /* expression: var ASSIGN expression  */
-#line 198 "parser.y"
+#line 207 "parser.y"
     {
         (yyval.node) = newStmtNode(AssignK);
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[0].node);
     }
-#line 1400 "parser.c"
+#line 1409 "parser.c"
     break;
 
   case 37: /* var: ID  */
-#line 207 "parser.y"
+#line 216 "parser.y"
     {
         (yyval.node) = newExpNode(IdK);
         (yyval.node)->attr.name = strdup((yyvsp[0].string));
     }
-#line 1409 "parser.c"
+#line 1418 "parser.c"
     break;
 
   case 38: /* var: ID LBRACKET expression RBRACKET  */
-#line 212 "parser.y"
+#line 221 "parser.y"
     {
         (yyval.node) = newExpNode(IdK);
         (yyval.node)->attr.name = strdup((yyvsp[-3].string));
         (yyval.node)->children[0] = (yyvsp[-1].node);
     }
-#line 1419 "parser.c"
+#line 1428 "parser.c"
     break;
 
   case 39: /* simple_expression: additive_expression rel additive_expression  */
-#line 220 "parser.y"
+#line 229 "parser.y"
     {
         (yyval.node) = newExpNode(OpK);
         (yyval.node)->attr.op = (yyvsp[-1].node)->attr.op;
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[0].node);
     }
-#line 1430 "parser.c"
+#line 1439 "parser.c"
     break;
 
   case 41: /* rel: LEQ  */
-#line 229 "parser.y"
+#line 238 "parser.y"
          { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = LEQ; }
-#line 1436 "parser.c"
+#line 1445 "parser.c"
     break;
 
   case 42: /* rel: LT  */
-#line 230 "parser.y"
+#line 239 "parser.y"
          { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = LT; }
-#line 1442 "parser.c"
+#line 1451 "parser.c"
     break;
 
   case 43: /* rel: GEQ  */
-#line 231 "parser.y"
+#line 240 "parser.y"
           { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = GEQ; }
-#line 1448 "parser.c"
+#line 1457 "parser.c"
     break;
 
   case 44: /* rel: GT  */
-#line 232 "parser.y"
+#line 241 "parser.y"
          { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = GT; }
-#line 1454 "parser.c"
+#line 1463 "parser.c"
     break;
 
   case 45: /* rel: EQ  */
-#line 233 "parser.y"
+#line 242 "parser.y"
          { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = EQ; }
-#line 1460 "parser.c"
+#line 1469 "parser.c"
     break;
 
   case 46: /* rel: NEQ  */
-#line 234 "parser.y"
+#line 243 "parser.y"
           { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = NEQ; }
-#line 1466 "parser.c"
+#line 1475 "parser.c"
     break;
 
   case 47: /* additive_expression: additive_expression add term  */
-#line 238 "parser.y"
+#line 247 "parser.y"
     {
         (yyval.node) = newExpNode(OpK);
         (yyval.node)->attr.op = (yyvsp[-1].node)->attr.op;
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[0].node);
     }
-#line 1477 "parser.c"
+#line 1486 "parser.c"
     break;
 
   case 49: /* add: PLUS  */
-#line 247 "parser.y"
+#line 256 "parser.y"
           { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = PLUS; }
-#line 1483 "parser.c"
+#line 1492 "parser.c"
     break;
 
   case 50: /* add: MINUS  */
-#line 248 "parser.y"
+#line 257 "parser.y"
             { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = MINUS; }
-#line 1489 "parser.c"
+#line 1498 "parser.c"
     break;
 
   case 51: /* term: term mult factor  */
-#line 252 "parser.y"
+#line 261 "parser.y"
     {
         (yyval.node) = newExpNode(OpK);
         (yyval.node)->attr.op = (yyvsp[-1].node)->attr.op;
         (yyval.node)->children[0] = (yyvsp[-2].node);
         (yyval.node)->children[1] = (yyvsp[0].node);
     }
-#line 1500 "parser.c"
+#line 1509 "parser.c"
     break;
 
   case 53: /* mult: TIMES  */
-#line 261 "parser.y"
+#line 270 "parser.y"
             { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = TIMES; }
-#line 1506 "parser.c"
+#line 1515 "parser.c"
     break;
 
   case 54: /* mult: DIV  */
-#line 262 "parser.y"
+#line 271 "parser.y"
           { (yyval.node) = newExpNode(OpK); (yyval.node)->attr.op = DIV; }
-#line 1512 "parser.c"
+#line 1521 "parser.c"
     break;
 
   case 55: /* factor: LPAREN expression RPAREN  */
-#line 265 "parser.y"
+#line 274 "parser.y"
                                  { (yyval.node) = (yyvsp[-1].node); }
-#line 1518 "parser.c"
+#line 1527 "parser.c"
     break;
 
   case 58: /* factor: NUMBER  */
-#line 269 "parser.y"
+#line 278 "parser.y"
     {
         (yyval.node) = newExpNode(ConstK);
         (yyval.node)->attr.val = (yyvsp[0].integer);
     }
-#line 1527 "parser.c"
+#line 1536 "parser.c"
     break;
 
   case 59: /* call: ID LPAREN args RPAREN  */
-#line 276 "parser.y"
+#line 285 "parser.y"
     {
         (yyval.node) = newExpNode(CallK);
         (yyval.node)->attr.name = strdup((yyvsp[-3].string));
         (yyval.node)->children[0] = (yyvsp[-1].node);
     }
-#line 1537 "parser.c"
+#line 1546 "parser.c"
     break;
 
   case 61: /* args: %empty  */
-#line 284 "parser.y"
+#line 293 "parser.y"
       { (yyval.node) = NULL; }
-#line 1543 "parser.c"
+#line 1552 "parser.c"
     break;
 
   case 62: /* arg_list: arg_list COMMA expression  */
-#line 288 "parser.y"
+#line 297 "parser.y"
     { (yyval.node) = addSibling((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1549 "parser.c"
+#line 1558 "parser.c"
     break;
 
 
-#line 1553 "parser.c"
+#line 1562 "parser.c"
 
       default: break;
     }
@@ -1742,7 +1751,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 292 "parser.y"
+#line 301 "parser.y"
 
 
 void yyerror(char *msg) {

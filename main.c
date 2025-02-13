@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "parser.tab.h"
+#include "symtab.h"
 #include "utils.h"
 
 void openFile(char *filename);
@@ -13,6 +14,7 @@ int main(int argc, char *argv[]) {
     openFile(argv[1]);
     treeNode* tree = parse();
     if (tree != NULL) {
+        print_table(); // symbol table
         printTree(tree);
     }
     return 0;
