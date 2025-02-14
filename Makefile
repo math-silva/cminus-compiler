@@ -3,36 +3,37 @@ LEX = flex
 YACC = bison
 CFLAGS = -g
 
-OBJS = lex.yy.o parser.tab.o utils.o symtab.o analyze.o main.o
+SRC = src/
+OBJS = $(SRC)lex.yy.o $(SRC)parser.tab.o $(SRC)utils.o $(SRC)symtab.o $(SRC)analyze.o $(SRC)main.o
 
 all: cminus
 
-lex.yy.c: scanner.l
-	$(LEX) scanner.l
+$(SRC)lex.yy.c: $(SRC)scanner.l
+	$(LEX) -o $(SRC)lex.yy.c $(SRC)scanner.l
 
-parser.tab.c parser.tab.h: parser.y
-	$(YACC) -v -d parser.y
+$(SRC)parser.tab.c $(SRC)parser.tab.h: $(SRC)parser.y
+	$(YACC) -v -d -o $(SRC)parser.tab.c $(SRC)parser.y
 
-lex.yy.o: lex.yy.c parser.tab.h
-	$(CC) $(CFLAGS) -c lex.yy.c
+$(SRC)lex.yy.o: $(SRC)lex.yy.c $(SRC)parser.tab.h
+	$(CC) $(CFLAGS) -c $(SRC)lex.yy.c -o $(SRC)lex.yy.o
 
-parser.tab.o: parser.tab.c
-	$(CC) $(CFLAGS) -c parser.tab.c
+$(SRC)parser.tab.o: $(SRC)parser.tab.c
+	$(CC) $(CFLAGS) -c $(SRC)parser.tab.c -o $(SRC)parser.tab.o
 
-utils.o: utils.c utils.h
-	$(CC) $(CFLAGS) -c utils.c
+$(SRC)utils.o: $(SRC)utils.c $(SRC)utils.h
+	$(CC) $(CFLAGS) -c $(SRC)utils.c -o $(SRC)utils.o
 
-symtab.o: symtab.c symtab.h
-	$(CC) $(CFLAGS) -c symtab.c
+$(SRC)symtab.o: $(SRC)symtab.c $(SRC)symtab.h
+	$(CC) $(CFLAGS) -c $(SRC)symtab.c -o $(SRC)symtab.o
 
-analyze.o: analyze.c analyze.h symtab.h globals.h
-	$(CC) $(CFLAGS) -c analyze.c
+$(SRC)analyze.o: $(SRC)analyze.c $(SRC)analyze.h $(SRC)symtab.h $(SRC)globals.h
+	$(CC) $(CFLAGS) -c $(SRC)analyze.c -o $(SRC)analyze.o
 
-main.o: main.c globals.h utils.h symtab.h analyze.h
-	$(CC) $(CFLAGS) -c main.c
+$(SRC)main.o: $(SRC)main.c $(SRC)globals.h $(SRC)utils.h $(SRC)symtab.h $(SRC)analyze.h
+	$(CC) $(CFLAGS) -c $(SRC)main.c -o $(SRC)main.o
 
 cminus: $(OBJS)
 	$(CC) $(CFLAGS) -o cminus $(OBJS) -lfl
 
 clean:
-	rm -f *.o lex.yy.c parser.tab.c parser.tab.h parser.output cminus
+	rm -f $(SRC)*.o $(SRC)lex.yy.c $(SRC)parser.tab.c $(SRC)parser.tab.h $(SRC)parser.output cminus
