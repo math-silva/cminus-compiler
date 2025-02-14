@@ -53,8 +53,8 @@ int column = 0;
 
 .           { 
     char error_msg[50];
-    snprintf(error_msg, sizeof(error_msg), "unknown character '\033[1;32m%c\033[0m'", yytext[0]);
-    print_error(yylineno, column, "lexycal error", error_msg);
+    snprintf(error_msg, sizeof(error_msg), "Unknown character '\033[1;32m%c\033[0m'", yytext[0]);
+    print_error(yylineno, column, "Lexical Error", error_msg);
 }
 
 %%

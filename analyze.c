@@ -1,0 +1,247 @@
+#include "globals.h"
+#include "symtab.h"
+#include "analyze.h"
+#include "utils.h"
+
+typedef int bool;
+#define true 1
+#define false 0
+
+static void traverse(treeNode *t, void (*preProc)(treeNode *), void (*postProc)(treeNode *)) {
+    if (t != NULL) {
+        preProc(t);
+        for (int i = 0; i < MAX_CHILDREN; i++) {
+            traverse(t->children[i], preProc, postProc);
+        }
+        postProc(t);
+        traverse(t->sibling, preProc, postProc);
+    }
+}
+
+static void popAfterInsertProc(treeNode *t) {
+    if (t->nodeKind == StatementK && (t->kind.stmt == CompoundK)) {
+        popScope();
+    }
+}
+
+static void nullProc(treeNode *t) {
+    if (t == NULL) return;
+}
+
+static void symbolError(treeNode *t, const char *message) {
+    print_error(t->lineno, -1, "Symbol Error", message);
+}
+
+static bool isFirstCompoundK = false;
+static int locationCounter = 0;
+
+static void insertNode(treeNode *t) {
+    char msg[100];
+
+    switch (t->nodeKind) {
+        case ExpressionK: {
+            switch (t->kind.exp) {
+                case IdK: {
+                    Symbol *sym = symtab_lookup_all_scope(t->attr.name);
+                    if (sym == NULL) {
+                        snprintf(msg, sizeof(msg), "Undeclared variable '\033[1;32m%s\033[0m'", t->attr.name);
+                        symbolError(t, msg);
+                        break;
+                    } else {
+                        t->type = sym->type;
+                        insertLines(t->attr.name, t->lineno);
+                    }
+                    break;
+                }
+                case CallK: {
+                    Symbol *sym = symtab_lookup_all_scope(t->attr.name);
+                    if (sym == NULL) {
+                        snprintf(msg, sizeof(msg), "Undeclared function '\033[1;32m%s\033[0m'", t->attr.name);
+                        symbolError(t, msg);
+                        break;
+                    } else if (sym->kind != FUN) {
+                        snprintf(msg, sizeof(msg), "Called object '\033[1;32m%s\033[0m' is not a function", t->attr.name);
+                        symbolError(t, msg);
+                        break;
+                    } else {
+                        t->type = sym->type;
+                        insertLines(t->attr.name, t->lineno);
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+            break;
+        }
+        case StatementK: {
+            switch (t->kind.stmt) {
+                case CompoundK: {
+                    if (!isFirstCompoundK) {
+                        Scope scope = newScope(currScope()->name);
+                        scope->parent = currScope();
+                        pushScope(scope);
+                    }
+                    isFirstCompoundK = false;
+                    break;
+                }
+                case FunDeclK: {
+                    if (symtab_lookup_scope(t->attr.name) != NULL) {
+                        snprintf(msg, sizeof(msg), "Function '\033[1;32m%s\033[0m' already declared", t->attr.name);
+                        symbolError(t, msg);
+                        break;
+                    }
+
+                    if (strcmp(currScope()->name, "global") == 0) {
+                        symtab_insert(t->attr.name, currScope()->name, FUN, t->type, t);
+                    }
+
+                    Scope scope = newScope(t->attr.name);
+                    scope->parent = currScope();
+                    pushScope(scope);
+                    isFirstCompoundK = true;
+                    break;
+                }
+                case VarDeclK: {
+                    if (symtab_lookup(t->attr.name) != NULL) {
+                        snprintf(msg, sizeof(msg), "Variable '\033[1;32m%s\033[0m' already declared", t->attr.name);
+                        symbolError(t, msg);
+                        break;
+                    }
+
+                    if (t->type == Void) {
+                        snprintf(msg, sizeof(msg), "Cannot declare void type variable");
+                        symbolError(t, msg);
+                        break;
+                    }
+
+                    symtab_insert(t->attr.name, currScope()->name, VAR, t->type, t);
+                    break;
+                }
+                case ParamK: {
+                    if (t->attr.name != NULL) {
+                        if (symtab_lookup(t->attr.name) != NULL) {
+                            snprintf(msg, sizeof(msg), "Parameter '\033[1;32m%s\033[0m' already declared", t->attr.name);
+                            symbolError(t, msg);
+                            break;
+                        }
+
+                        symtab_insert(t->attr.name, currScope()->name, VAR, t->type, t);
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+
+static void typeError(treeNode *t, const char *message) {
+    print_error(t->lineno, -1, "Type Error", message);
+}
+
+static void checkNode(treeNode *t) {
+    char msg[100];
+
+    switch (t->nodeKind) {
+        case StatementK: {
+            switch (t->kind.stmt) {
+                case AssignK: {
+                    if (t->children[0]->type == Void) {
+                        snprintf(msg, sizeof(msg), "Cannot assign void type to a variable");
+                        typeError(t, msg);
+                    }
+                    break;
+                }
+                case ReturnK: {
+                    const treeNode *funcDecl = t;
+                    const ExpType funcType = funcDecl->type;
+                    const treeNode *expr = t->children[0];
+                    
+                    printf("funcName: %s\n", funcDecl->attr.name);
+                    printf("funcType: %d\n", funcType);
+                    printf("expr: %s\n", expr->attr.name);
+                    printf("expr: %d\n", expr->type);
+
+                    if (funcType == Void && (expr != NULL && expr->type != Void)) {
+                        snprintf(msg, sizeof(msg), "Cannot return a value from a void function");
+                        typeError(t, msg);
+                    } else if (funcType != Void && (expr == NULL || expr->type == Void)) {
+                        snprintf(msg, sizeof(msg), "Must return a value from a non-void function");
+                        typeError(t, msg);
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+static void insertBuiltInFunctions() {
+    treeNode *input_fun_decl = newStmtNode(FunDeclK);
+    input_fun_decl->type = Integer;
+
+    treeNode *input_type_specifier = newStmtNode(FunDeclK);
+    input_type_specifier->type = Integer;
+
+    treeNode *input_compound_stmt = newStmtNode(CompoundK);
+    input_compound_stmt->children[0] = NULL;
+    input_compound_stmt->children[1] = NULL;
+
+    input_fun_decl->attr.name = "input";
+    input_fun_decl->lineno = 0;
+    input_fun_decl->children[0] = input_type_specifier;
+    input_fun_decl->children[1] = NULL;
+    input_fun_decl->children[2] = input_compound_stmt;
+
+    symtab_insert("input", "global", FUN, Integer, input_fun_decl);
+
+    treeNode *output_fun_decl = newStmtNode(FunDeclK);
+    output_fun_decl->type = Void;
+
+    treeNode *output_type_specifier = newStmtNode(FunDeclK);
+    output_type_specifier->type = Void;
+
+    treeNode *output_params = newStmtNode(ParamK);
+    output_params->attr.name = "arg";
+    output_params->children[0] = newExpNode(IdK);
+    output_params->children[0]->type = Integer;
+
+    treeNode *output_compound_stmt = newStmtNode(CompoundK);
+    output_compound_stmt->children[0] = NULL;
+    output_compound_stmt->children[1] = NULL;
+
+    output_fun_decl->attr.name = "output";
+    output_fun_decl->lineno = 0;
+    output_fun_decl->children[0] = output_type_specifier;
+    output_fun_decl->children[1] = output_params;
+    output_fun_decl->children[2] = output_compound_stmt;
+
+    symtab_insert("output", "global", FUN, Void, output_fun_decl);
+}
+
+void typeCheck(treeNode *syntaxTree) {
+    traverse(syntaxTree, nullProc, checkNode);
+}
+
+void buildSymTab(treeNode *syntaxTree) {
+    Scope globalScope = newScope("global");
+    pushScope(globalScope);
+
+    insertBuiltInFunctions(syntaxTree);
+
+    traverse(syntaxTree, insertNode, popAfterInsertProc);
+
+    popScope();
+    printSymTab();
+}

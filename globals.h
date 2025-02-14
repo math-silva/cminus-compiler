@@ -19,20 +19,26 @@ typedef enum {
     Void, Integer
 } ExpType;
 
+struct ScopeListRec;
+
 typedef struct treeNode {
     struct treeNode *children[MAX_CHILDREN];
     struct treeNode *sibling;
     int lineno;
     NodeKind nodeKind;
+
     union {
         StatementKind stmt;
         ExpressionKind exp;
     } kind;
+
     union {
         int op;
         int val;
         char *name;
+        struct ScopeListRec *scope;
     } attr;
+
     ExpType type;
 } treeNode;
 

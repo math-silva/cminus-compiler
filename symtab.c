@@ -1,71 +1,135 @@
-#include "symtab.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "symtab.h"
 
-Symbol symtab[SIZE];
-int symbol_count = 0;
+Scope globalScope = NULL;
 
-int binary_search(char *name, char *scope, SymbolKind kind) {
-    int left = 0, right = symbol_count - 1;
-    while (left <= right) {
-        int mid = left + (right - left) / 2;
-        int cmp = strcmp(symtab[mid].name, name);
-        if (cmp == 0) {
-            cmp = strcmp(symtab[mid].scope, scope);
-            if (cmp == 0 && symtab[mid].kind == kind) {
-                return mid;
-            }
+Scope newScope(char *scopeName) {
+    Scope scope = (Scope) malloc(sizeof(struct ScopeListRec));
+    scope->name = scopeName;
+    scope->nestedLevel = 0;
+    scope->startLine = 0;
+    scope->parent = NULL;
+    scope->symbol_count = 0;
+    return scope;
+}
+
+Scope currScope() {
+    return scopeStack[topScope-1];
+}
+
+void popScope() {
+    scopeStack[topScope--] = NULL;
+}
+
+void pushScope(Scope scope) {
+    for (int i = 0; i < sizeOfScopeList; i++) {
+        if (strcmp(scopeList[i]->name, scope->name) == 0) {
+            scope->nestedLevel = scopeList[i]->nestedLevel + 1;
         }
-        if (cmp < 0) left = mid + 1;
-        else right = mid - 1;
+    }
+    scopeStack[topScope++] = scope;
+    insertScope(scope);
+}
+
+void insertScope(Scope scope) {
+    scopeList[sizeOfScopeList++] = scope;
+}
+
+int binarySearch(char *name, Scope scope) {
+    int low = 0;
+    int high = scope->symbol_count - 1;
+    while (low <= high) {
+        int mid = (low + high) / 2;
+        if (strcmp(scope->symTab[mid].name, name) == 0) {
+            return mid;
+        } else if (strcmp(scope->symTab[mid].name, name) < 0) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
     }
     return -1;
 }
 
-void insert_symbol(char *name, char *scope, SymbolKind kind, DataType dataType, int line) {
-    if (symbol_count >= SIZE) {
-        printf("Error: symbol table is full\n");
+void symtab_insert(char *name, char *scopeName, SymbolKind kind, ExpType type, treeNode *node) {
+    Scope scope = currScope();
+
+    // try to find the symbol in the current scope
+    int index = binarySearch(name, scope);
+    if (index != -1) {
+        // symbol already exists in the current scope
+        Symbol *sym = &scope->symTab[index];
+        sym->lines[sym->line_count++] = node->lineno;
         return;
     }
-    int pos = binary_search(name, scope, kind);
-    if (pos != -1) { // Symbol already exists
-        if (symtab[pos].line_count < LINE_SIZE)
-            symtab[pos].lines[symtab[pos].line_count++] = line;
-        return;
+    
+    // symbol does not exist in the current scope
+    Symbol *sym = &scope->symTab[scope->symbol_count++];
+    sym->name = name;
+    sym->lines[sym->line_count++] = node->lineno;
+    sym->kind = kind;
+    sym->scope = scopeName;
+    sym->type = type;
+}
+    
+Symbol* symtab_lookup(char *name) {
+    Scope scope = currScope();
+    int index = binarySearch(name, scope);
+    if (index != -1) {
+        return &scope->symTab[index];
     }
-
-    // Shift symbols to the right
-    int i = symbol_count - 1;
-    while (i >= 0 && strcmp(symtab[i].name, name) > 0) {
-        symtab[i + 1] = symtab[i];
-        i--;
-    }
-    // Insert new symbol
-    symtab[i + 1].name = strdup(name);
-    symtab[i + 1].scope = strdup(scope);
-    symtab[i + 1].kind = kind;
-    symtab[i + 1].dataType = dataType;
-    symtab[i + 1].lines[0] = line;
-    symtab[i + 1].line_count = 1;
-    symbol_count++;
+    return NULL;
 }
 
-int lookup_symbol(char *name, char *scope, SymbolKind kind) {
-    return binary_search(name, scope, kind);
-}
-
-void print_table() {
-    printf("%-15s %-10s %-7s %-7s %-7s\n", "Variable Name", "Scope", "Type", "Kind", "Line Numbers");
-    printf("-----------------------------------------------------------\n");
-    for (int i = 0; i < symbol_count; i++) {
-        printf("%-15s %-10s %-7s %-7s ",
-            symtab[i].name,
-            symtab[i].scope,
-            symtab[i].dataType == INT_T ? "int" : "void",
-            symtab[i].kind == VAR ? "var" : "fun");
-        for (int j = 0; j < symtab[i].line_count; j++) {
-            printf("%d ", symtab[i].lines[j]);
+Scope symtab_lookup_scope(char *scopeName) {
+    for (int i = 0; i < sizeOfScopeList; i++) {
+        if (strcmp(scopeList[i]->name, scopeName) == 0) {
+            return scopeList[i];
         }
-        printf("\n");
+    }
+    return NULL;
+}
+
+Symbol* symtab_lookup_all_scope(char *name) {
+    Scope scope = currScope();
+    while (scope != NULL) {
+        for (int i = 0; i < scope->symbol_count; i++) {
+            if (strcmp(scope->symTab[i].name, name) == 0) {
+                return &scope->symTab[i];
+            }
+        }
+        scope = scope->parent;
+    }
+    return NULL;
+}
+
+void insertLines(char *name, int lineno) { // insert line number for a symbol in all scopes
+    Scope scope = currScope();
+    while (scope != NULL) {
+        int index = binarySearch(name, scope); // find the symbol in the current scope
+        if (index != -1) {
+            scope->symTab[index].lines[scope->symTab[index].line_count++] = lineno; // insert the line number
+        }
+        scope = scope->parent;
+    }
+}
+
+
+
+void printSymTab() {
+    printf("%-15s %-10s %-10s %-10s %-10s\n", "Variable Name", "Scope", "Type", "Kind", "Line Numbers");
+    printf("-------------------------------------------------------------------\n");
+    for (int i = 0; i < sizeOfScopeList; i++) {
+        Scope scope = scopeList[i];
+        for (int j = 0; j < scope->symbol_count; j++) {
+            Symbol sym = scope->symTab[j];
+            printf("%-15s %-10s %-10s %-10s", sym.name, sym.scope, sym.type == INT ? "integer" : "void", sym.kind == VAR ? "var" : "fun");
+            for (int k = 0; k < sym.line_count; k++) {
+                printf("%d ", sym.lines[k]);
+            }
+            printf("\n");
+        }
     }
 }

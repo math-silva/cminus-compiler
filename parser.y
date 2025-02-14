@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "globals.h"
-#include "symtab.h"
 #include "utils.h"
 
 void yyerror(char *);
@@ -75,7 +74,6 @@ var_declaration: type_specifier ID SEMICOLON
         $$ = newStmtNode(VarDeclK);
         $$->type = $1->type;
         $$->attr.name = strdup($2);
-        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     | type_specifier ID LBRACKET NUMBER RBRACKET SEMICOLON
     {
@@ -85,7 +83,6 @@ var_declaration: type_specifier ID SEMICOLON
         treeNode *size = newExpNode(ConstK);
         size->attr.val = $4;
         $$->children[0] = size;
-        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     ;
 
@@ -108,8 +105,6 @@ fun_declaration: type_specifier ID LPAREN params RPAREN compound_stmt
         $$->attr.name = strdup($2);
         $$->children[0] = $4;
         $$->children[1] = $6;
-        insert_symbol($2, "global", FUN, ($1->type == Integer ? INT_T : VOID_T), yylineno);
-        strcpy(current_scope, $2);
     }
     ;
 
@@ -131,14 +126,12 @@ param: type_specifier ID
         $$ = newStmtNode(ParamK);
         $$->type = $1->type;
         $$->attr.name = strdup($2);
-        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     | type_specifier ID LBRACKET RBRACKET
     {
         $$ = newStmtNode(ParamK);
         $$->type = $1->type;
         $$->attr.name = strdup($2);
-        insert_symbol($2, current_scope, VAR, ($1->type == Integer ? INT_T : VOID_T), yylineno);
     }
     ;
 
@@ -195,7 +188,10 @@ iteration_stmt: WHILE LPAREN expression RPAREN statement
     ;
 
 return_stmt: RETURN SEMICOLON
-    { $$ = newStmtNode(ReturnK); }
+    { 
+        $$ = newStmtNode(ReturnK); 
+        $$->type = Void;
+    }
     | RETURN expression SEMICOLON
     {
         $$ = newStmtNode(ReturnK);
@@ -303,8 +299,8 @@ arg_list: arg_list COMMA expression
 void yyerror(char *msg) {
     extern char *yytext;
     char error_msg[50];
-    snprintf(error_msg, sizeof(error_msg), "unexpected token '\033[1;32m%s\033[0m'", yytext);
-    print_error(yylineno, column, "syntatical error", error_msg);
+    snprintf(error_msg, sizeof(error_msg), "Unexpected token '\033[1;32m%s\033[0m'", yytext);
+    print_error(yylineno, column, "Syntax Error", error_msg);
 }
 
 treeNode * parse() {

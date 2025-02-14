@@ -1,7 +1,7 @@
 #include "globals.h"
-#include "parser.tab.h"
-#include "symtab.h"
 #include "utils.h"
+#include "parser.tab.h"
+#include "analyze.h"
 
 void openFile(char *filename);
 treeNode *parse();
@@ -14,8 +14,9 @@ int main(int argc, char *argv[]) {
     openFile(argv[1]);
     treeNode* tree = parse();
     if (tree != NULL) {
-        print_table(); // symbol table
         printTree(tree);
+        buildSymTab(tree);
+        typeCheck(tree);
     }
     return 0;
 }
