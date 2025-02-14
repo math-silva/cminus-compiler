@@ -1,3 +1,0 @@
-- Verificar o erro na função typeCheck do analyze
-- Verificar se a árvore sintática está sendo criada corretamente
-- Qual a raiz da árvore sintática?
