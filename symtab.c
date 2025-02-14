@@ -107,14 +107,8 @@ Symbol* symtab_lookup_all_scope(char *name) {
 }
 
 void insertLines(char *name, int lineno) {
-    Scope scope = currScope();
-    while (scope != NULL) {
-        int index = binarySearch(name, scope); // find the symbol in the current scope
-        if (index != -1) {
-            scope->symTab[index].lines[scope->symTab[index].line_count++] = lineno; // insert the line number
-        }
-        scope = scope->parent;
-    }
+    Symbol *sym = symtab_lookup_all_scope(name);
+    sym->lines[sym->line_count++] = lineno;
 }
 
 void printSymTab() {
