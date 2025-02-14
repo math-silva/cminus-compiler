@@ -1,6 +1,6 @@
 #include "utils.h"
 
-treeNode * newExpNode(ExpressionKind kind) { 
+treeNode* newExpNode(ExpressionKind kind) { 
     treeNode * t = (treeNode *) malloc(sizeof(treeNode));
     int i;
     if (t==NULL)
@@ -16,7 +16,7 @@ treeNode * newExpNode(ExpressionKind kind) {
     return t;
 }
 
-treeNode * newStmtNode(StatementKind kind) { 
+treeNode* newStmtNode(StatementKind kind) { 
     treeNode * t = (treeNode *) malloc(sizeof(treeNode));
     int i;
     if (t==NULL)
@@ -31,7 +31,7 @@ treeNode * newStmtNode(StatementKind kind) {
     return t;
 }
 
-treeNode * addSibling(treeNode* first, treeNode* newSibling) {
+treeNode* addSibling(treeNode *first, treeNode *newSibling) {
     if (first != NULL) {
         treeNode *t = first;
         while (t->sibling != NULL)
@@ -48,7 +48,12 @@ void printSpaces(int num) {
         printf(" ");
 }
 
-char * getExpKindString(ExpressionKind kind) {
+void printSpacesToFile(int num, FILE *file) {
+    for (int i = 0; i < num; i++)
+        fprintf(file, " ");
+}
+
+char* getExpKindString(ExpressionKind kind) {
     switch (kind) {
         case OpK:
             return "Op";
@@ -63,7 +68,7 @@ char * getExpKindString(ExpressionKind kind) {
     }
 }
 
-char * getStmtKindString(StatementKind kind) {
+char* getStmtKindString(StatementKind kind) {
     switch (kind) {
         case IfK:
             return "If";
@@ -86,7 +91,7 @@ char * getStmtKindString(StatementKind kind) {
     }
 }
 
-char * getExpTypeString(ExpType type) {
+char* getExpTypeString(ExpType type) {
     switch (type) {
         case Void:
             return "Void";
@@ -97,7 +102,7 @@ char * getExpTypeString(ExpType type) {
     }
 }
 
-char * getTokenString(int type) {
+char* getTokenString(int type) {
     switch (type) {
         case PLUS:
             return "+";
@@ -126,7 +131,7 @@ char * getTokenString(int type) {
     }
 }
 
-void printTree(treeNode * tree) {
+void printTree(treeNode *tree) {
     static int indent = 0;
 
     while (tree != NULL) {
@@ -159,6 +164,45 @@ void printTree(treeNode * tree) {
         indent += 4;
         for (int i = 0; i < MAX_CHILDREN; i++) {
             printTree(tree->children[i]);
+        }
+        indent -= 4;
+        tree = tree->sibling;
+    }
+}
+
+void printTreeToFile(treeNode *tree, FILE *file) {
+    static int indent = 0;
+
+    while (tree != NULL) {
+        printSpacesToFile(indent, file);
+        if (tree->nodeKind == StatementK) {
+            fprintf(file, "Stmt: %s\n", getStmtKindString(tree->kind.stmt));
+            if (tree->kind.stmt == VarDeclK || tree->kind.stmt == FunDeclK) {
+                fprintf(file, " %s %s", tree->attr.name, getExpTypeString(tree->type));
+            }
+            if (tree->kind.stmt == ParamK) {
+                if (tree->type != Void) {
+                    fprintf(file, " %s %s", tree->attr.name, getExpTypeString(tree->type));
+                } else {
+                    fprintf(file, " Void ");
+                }
+            }
+            fprintf(file, "\n");
+        } else if (tree->nodeKind == ExpressionK) {
+            fprintf(file, "Exp: %s", getExpKindString(tree->kind.exp));
+            if (tree->kind.exp == OpK) {
+                fprintf(file, " %s\n", getTokenString(tree->attr.op));
+            } else if (tree->kind.exp == ConstK) {
+                fprintf(file, " %d\n", tree->attr.val);
+            } else if (tree->kind.exp == IdK || tree->kind.exp == CallK) {
+                fprintf(file, " %s\n", tree->attr.name);
+            }
+            fprintf(file, "\n");
+        }
+
+        indent += 4;
+        for (int i = 0; i < MAX_CHILDREN; i++) {
+            printTreeToFile(tree->children[i], file);
         }
         indent -= 4;
         tree = tree->sibling;

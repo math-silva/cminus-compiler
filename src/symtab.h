@@ -1,6 +1,7 @@
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
+#include <stdio.h>
 #include <stdbool.h>
 #include "globals.h"
 
@@ -52,5 +53,6 @@ Symbol* symtab_lookup_all_scope(char *name);
 void insertLines(char *name, int lineno);
 
 void printSymTab();
+void printSymTabToFile(FILE *file);
 
 #endif

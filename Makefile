@@ -4,7 +4,7 @@ YACC = bison
 CFLAGS = -g
 
 SRC = src/
-OBJS = $(SRC)lex.yy.o $(SRC)parser.tab.o $(SRC)utils.o $(SRC)symtab.o $(SRC)analyze.o $(SRC)main.o
+OBJS = $(SRC)lex.yy.o $(SRC)parser.tab.o $(SRC)utils.o $(SRC)symtab.o $(SRC)analyze.o $(SRC)output.o $(SRC)main.o
 
 all: cminus
 
@@ -29,7 +29,10 @@ $(SRC)symtab.o: $(SRC)symtab.c $(SRC)symtab.h
 $(SRC)analyze.o: $(SRC)analyze.c $(SRC)analyze.h $(SRC)symtab.h $(SRC)globals.h
 	$(CC) $(CFLAGS) -c $(SRC)analyze.c -o $(SRC)analyze.o
 
-$(SRC)main.o: $(SRC)main.c $(SRC)globals.h $(SRC)utils.h $(SRC)symtab.h $(SRC)analyze.h
+$(SRC)output.o: $(SRC)output.c $(SRC)output.h
+	$(CC) $(CFLAGS) -c $(SRC)output.c -o $(SRC)output.o
+
+$(SRC)main.o: $(SRC)main.c $(SRC)globals.h $(SRC)utils.h $(SRC)symtab.h $(SRC)analyze.h $(SRC)output.h
 	$(CC) $(CFLAGS) -c $(SRC)main.c -o $(SRC)main.o
 
 cminus: $(OBJS)

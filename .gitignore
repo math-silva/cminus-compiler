@@ -1,4 +1,5 @@
 temp
+output
 *.o
 *.output
 lex.yy.c

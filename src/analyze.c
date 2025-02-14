@@ -206,7 +206,6 @@ static void insertBuiltInFunctions() {
     Symbol *input = symtab_lookup_all_scope("input");
     input->hasReturn = true;
 
-
     treeNode *output_fun_decl = newStmtNode(FunDeclK);
     output_fun_decl->type = Void;
 
@@ -265,5 +264,5 @@ void buildSymTab(treeNode *syntaxTree) {
     checkFunctionReturns(globalScope);
     
     popScope();
-    printSymTab();
+    // printSymTab();
 }

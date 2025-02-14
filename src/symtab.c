@@ -56,7 +56,6 @@ int binarySearch(char *name, Scope scope) {
 
 void symtab_insert(char *name, char *scopeName, SymbolKind kind, ExpType type, treeNode *node) {
     Scope scope = currScope();
-
     // try to find the symbol in the current scope
     int index = binarySearch(name, scope);
     if (index != -1) {
@@ -69,6 +68,7 @@ void symtab_insert(char *name, char *scopeName, SymbolKind kind, ExpType type, t
     // symbol does not exist in the current scope
     Symbol *sym = &scope->symTab[scope->symbol_count++];
     sym->name = name;
+    sym->line_count = 0;
     sym->lines[sym->line_count++] = node->lineno;
     sym->kind = kind;
     sym->scope = scopeName;
@@ -134,6 +134,33 @@ void printSymTab() {
                 }
             }
             printf("\n");
+        }
+    }
+}
+
+void printSymTabToFile(FILE *file) {
+    fprintf(file, "%-15s %-10s %-10s %-10s %-10s\n", "Variable Name", "Scope", "Type", "Kind", "Line Numbers");
+    fprintf(file, "-------------------------------------------------------------------\n");
+    for (int i = 0; i < sizeOfScopeList; i++) {
+        Scope scope = scopeList[i];
+        for (int j = 0; j < scope->symbol_count; j++) {
+            Symbol sym = scope->symTab[j];
+
+            fprintf(file, "%-15s %-10s %-10s %-10s ", 
+                sym.name, 
+                sym.scope, 
+                sym.type == Integer ? "integer" : "void", 
+                sym.kind == VAR ? "var" : "fun");
+
+            int lastPrinted = -1;
+            for (int k = 0; k < sym.line_count; k++) {
+                if (sym.lines[k] != lastPrinted) {
+                    if (k > 0) fprintf(file, ", ");
+                    fprintf(file, "%d", sym.lines[k]);
+                    lastPrinted = sym.lines[k];
+                }
+            }
+            fprintf(file, "\n");
         }
     }
 }
