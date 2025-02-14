@@ -19,6 +19,11 @@ typedef enum {
     Void, Integer
 } ExpType;
 
+typedef struct {
+    char *name;
+    int lineno;
+} TokenAttr;
+
 struct ScopeListRec;
 
 typedef struct treeNode {

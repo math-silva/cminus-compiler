@@ -26,13 +26,14 @@ char current_scope[100] = "global";
     treeNode *node;
     int integer;
     char* string;
+    TokenAttr *token;
 }
 
 %token ELSE IF INT RETURN VOID WHILE
 %token PLUS MINUS TIMES DIV LEQ LT GEQ GT EQ NEQ ASSIGN
 %token COMMA SEMICOLON LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
 %token <integer> NUMBER
-%token <string> ID
+%token <token> ID
 
 %left PLUS MINUS
 %left TIMES DIV
@@ -73,16 +74,18 @@ var_declaration: type_specifier ID SEMICOLON
     {
         $$ = newStmtNode(VarDeclK);
         $$->type = $1->type;
-        $$->attr.name = strdup($2);
+        $$->attr.name = strdup($2->name);
+        $$->lineno = $2->lineno;
     }
     | type_specifier ID LBRACKET NUMBER RBRACKET SEMICOLON
     {
         $$ = newStmtNode(VarDeclK);
         $$->type = $1->type;
-        $$->attr.name = strdup($2);
+        $$->attr.name = strdup($2->name);
         treeNode *size = newExpNode(ConstK);
         size->attr.val = $4;
         $$->children[0] = size;
+        $$->lineno = $2->lineno;
     }
     ;
 
@@ -102,9 +105,10 @@ fun_declaration: type_specifier ID LPAREN params RPAREN compound_stmt
     {
         $$ = newStmtNode(FunDeclK);
         $$->type = $1->type;
-        $$->attr.name = strdup($2);
+        $$->attr.name = strdup($2->name);
         $$->children[0] = $4;
         $$->children[1] = $6;
+        $$->lineno = $2->lineno;
     }
     ;
 
@@ -125,13 +129,15 @@ param: type_specifier ID
     {
         $$ = newStmtNode(ParamK);
         $$->type = $1->type;
-        $$->attr.name = strdup($2);
+        $$->attr.name = strdup($2->name);
+        $$->lineno = $2->lineno;
     }
     | type_specifier ID LBRACKET RBRACKET
     {
         $$ = newStmtNode(ParamK);
         $$->type = $1->type;
-        $$->attr.name = strdup($2);
+        $$->attr.name = strdup($2->name);
+        $$->lineno = $2->lineno;
     }
     ;
 
@@ -211,13 +217,15 @@ expression: var ASSIGN expression
 var: ID
     {
         $$ = newExpNode(IdK);
-        $$->attr.name = strdup($1);
+        $$->attr.name = strdup($1->name);
+        $$->lineno = $1->lineno;
     }
     | ID LBRACKET expression RBRACKET
     {
         $$ = newExpNode(IdK);
-        $$->attr.name = strdup($1);
+        $$->attr.name = strdup($1->name);
         $$->children[0] = $3;
+        $$->lineno = $1->lineno;
     }
     ;
 
@@ -274,14 +282,16 @@ factor: LPAREN expression RPAREN { $$ = $2; }
     {
         $$ = newExpNode(ConstK);
         $$->attr.val = $1;
+        $$->type = Integer;
     }
     ;
 
 call: ID LPAREN args RPAREN
     {
         $$ = newExpNode(CallK);
-        $$->attr.name = strdup($1);
+        $$->attr.name = strdup($1->name);
         $$->children[0] = $3;
+        $$->lineno = $1->lineno;
     }
     ;
 

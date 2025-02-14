@@ -1,6 +1,7 @@
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
+#include <stdbool.h>
 #include "globals.h"
 
 #define SIZE 200  // symbol table size
@@ -15,6 +16,7 @@ typedef struct {
     SymbolKind kind;
     char *scope;
     ExpType type;
+    bool hasReturn;
 } Symbol;
 
 typedef struct ScopeListRec {

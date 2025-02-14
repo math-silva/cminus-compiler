@@ -37,6 +37,7 @@ void insertScope(Scope scope) {
     scopeList[sizeOfScopeList++] = scope;
 }
 
+
 int binarySearch(char *name, Scope scope) {
     int low = 0;
     int high = scope->symbol_count - 1;
@@ -105,7 +106,7 @@ Symbol* symtab_lookup_all_scope(char *name) {
     return NULL;
 }
 
-void insertLines(char *name, int lineno) { // insert line number for a symbol in all scopes
+void insertLines(char *name, int lineno) {
     Scope scope = currScope();
     while (scope != NULL) {
         int index = binarySearch(name, scope); // find the symbol in the current scope
@@ -116,8 +117,6 @@ void insertLines(char *name, int lineno) { // insert line number for a symbol in
     }
 }
 
-
-
 void printSymTab() {
     printf("%-15s %-10s %-10s %-10s %-10s\n", "Variable Name", "Scope", "Type", "Kind", "Line Numbers");
     printf("-------------------------------------------------------------------\n");
@@ -125,9 +124,20 @@ void printSymTab() {
         Scope scope = scopeList[i];
         for (int j = 0; j < scope->symbol_count; j++) {
             Symbol sym = scope->symTab[j];
-            printf("%-15s %-10s %-10s %-10s", sym.name, sym.scope, sym.type == INT ? "integer" : "void", sym.kind == VAR ? "var" : "fun");
+
+            printf("%-15s %-10s %-10s %-10s ", 
+                sym.name, 
+                sym.scope, 
+                sym.type == Integer ? "integer" : "void", 
+                sym.kind == VAR ? "var" : "fun");
+
+            int lastPrinted = -1;  
             for (int k = 0; k < sym.line_count; k++) {
-                printf("%d ", sym.lines[k]);
+                if (sym.lines[k] != lastPrinted) {
+                    if (k > 0) printf(", ");
+                    printf("%d", sym.lines[k]);
+                    lastPrinted = sym.lines[k];
+                }
             }
             printf("\n");
         }

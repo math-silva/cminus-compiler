@@ -40,7 +40,9 @@ int column = 0;
 
 [a-zA-Z][a-zA-Z0-9]* {
     column += yyleng;
-    yylval.string = strdup(yytext);
+    yylval.token = (TokenAttr *) malloc(sizeof(TokenAttr));
+    yylval.token->name = strdup(yytext);
+    yylval.token->lineno = yylineno;
     return ID;
 }
 

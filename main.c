@@ -14,9 +14,8 @@ int main(int argc, char *argv[]) {
     openFile(argv[1]);
     treeNode* tree = parse();
     if (tree != NULL) {
-        printTree(tree);
+        //printTree(tree);
         buildSymTab(tree);
-        typeCheck(tree);
     }
     return 0;
 }
