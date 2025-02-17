@@ -66,7 +66,35 @@ static void insertNode(treeNode *t) {
                         symbolError(t, msg);
                         break;
                     }
-                    // Verifica quantidade de params e compara com fun->param_count
+
+                    // Check if the number of arguments is correct
+                    int arg_count = 0;
+                    treeNode *arg = t->children[0];
+                    while (arg != NULL) {
+                        // Arguments must be integer values
+                        if (arg->kind.exp != OpK && arg->type != Integer) {
+                            Symbol *argSym = symtab_lookup_all_scope(arg->attr.name);
+                            if (argSym == NULL) {
+                                snprintf(msg, sizeof(msg), "Undeclared variable '\033[1;32m%s\033[1;37m' in the current scope", arg->attr.name);
+                                symbolError(t, msg);
+                                break;
+                            } else if (argSym->type == Void) {
+                                snprintf(msg, sizeof(msg), "Function arguments must be integer values");
+                                typeError(t, msg);
+                                break;
+                            }
+                        }
+
+                        arg_count++;
+                        arg = arg->sibling;
+                    }
+                    
+                    if (arg_count != fun->param_count) {
+                        snprintf(msg, sizeof(msg), "Function '\033[1;32m%s\033[1;37m' expects %d arguments, but %d were given", t->attr.name, fun->param_count, arg_count);
+                        symbolError(t, msg);
+                        break;
+                    }
+                    
                     t->type = fun->type;
                     insertLines(t->attr.name, t->lineno);
                     break;
@@ -152,7 +180,6 @@ static void insertNode(treeNode *t) {
                         symbolError(t, msg);
                         break;
                     }
-
                     symtab_insert(t->attr.name, currScope()->name, VAR, t->type, t);
                     break;
                 }
@@ -162,9 +189,11 @@ static void insertNode(treeNode *t) {
                         symbolError(t, msg);
                         break;
                     }
+                    // Void parameter don't need to be checked
+                    if (t->type == Void) break;
+                    
                     Symbol *fun = symtab_lookup_all_scope(currScope()->name);
                     fun->param_count++;
-                    
                     symtab_insert(t->attr.name, currScope()->name, VAR, t->type, t);
                     break;
                 }
@@ -256,8 +285,7 @@ static void insertBuiltInFunctions() {
     input_fun_decl->children[2] = input_compound_stmt;
 
     symtab_insert("input", "global", FUN, Integer, input_fun_decl);
-    Symbol *input = symtab_lookup_all_scope("input");
-    input->hasReturn = true;
+    symtab_lookup_all_scope("input")->hasReturn = true;
 
     treeNode *output_fun_decl = newStmtNode(FunDeclK);
     output_fun_decl->type = Void;
@@ -281,6 +309,7 @@ static void insertBuiltInFunctions() {
     output_fun_decl->children[2] = output_compound_stmt;
 
     symtab_insert("output", "global", FUN, Void, output_fun_decl);
+    symtab_lookup_all_scope("output")->param_count = 1;
 }
 
 // Check if main function is declared

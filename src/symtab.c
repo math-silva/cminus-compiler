@@ -37,34 +37,18 @@ void insertScope(Scope scope) {
     scopeList[sizeOfScopeList++] = scope;
 }
 
-
-int binarySearch(char *name, Scope scope) {
-    int low = 0;
-    int high = scope->symbol_count - 1;
-    while (low <= high) {
-        int mid = (low + high) / 2;
-        if (strcmp(scope->symTab[mid].name, name) == 0) {
-            return mid;
-        } else if (strcmp(scope->symTab[mid].name, name) < 0) {
-            low = mid + 1;
-        } else {
-            high = mid - 1;
-        }
-    }
-    return -1;
-}
-
 void symtab_insert(char *name, char *scopeName, SymbolKind kind, ExpType type, treeNode *node) {
     Scope scope = currScope();
     // try to find the symbol in the current scope
-    int index = binarySearch(name, scope);
-    if (index != -1) {
-        // symbol already exists in the current scope
-        Symbol *sym = &scope->symTab[index];
-        sym->lines[sym->line_count++] = node->lineno;
-        return;
+    for (int i = 0; i < scope->symbol_count; i++) {
+        if (strcmp(scope->symTab[i].name, name) == 0) {
+            // symbol already exists in the current scope
+            Symbol *sym = &scope->symTab[i];
+            sym->lines[sym->line_count++] = node->lineno;
+            return;
+        }
     }
-    
+
     // symbol does not exist in the current scope
     Symbol *sym = &scope->symTab[scope->symbol_count++];
     sym->name = name;
@@ -78,9 +62,10 @@ void symtab_insert(char *name, char *scopeName, SymbolKind kind, ExpType type, t
     
 Symbol* symtab_lookup(char *name) {
     Scope scope = currScope();
-    int index = binarySearch(name, scope);
-    if (index != -1) {
-        return &scope->symTab[index];
+    for (int i = 0; i < scope->symbol_count; i++) {
+        if (strcmp(scope->symTab[i].name, name) == 0) {
+            return &scope->symTab[i];
+        }
     }
     return NULL;
 }
@@ -123,7 +108,7 @@ void printSymTab() {
             printf("%-15s %-10s %-10s %-10s ", 
                 sym.name, 
                 sym.scope, 
-                sym.type == Integer ? "integer" : "void", 
+                sym.type == Integer ? "int" : "void", 
                 sym.kind == VAR ? "var" : "fun");
 
             int lastPrinted = -1;  
@@ -150,7 +135,7 @@ void printSymTabToFile(FILE *file) {
             fprintf(file, "%-15s %-10s %-10s %-10s ", 
                 sym.name, 
                 sym.scope, 
-                sym.type == Integer ? "integer" : "void", 
+                sym.type == Integer ? "int" : "void", 
                 sym.kind == VAR ? "var" : "fun");
 
             int lastPrinted = -1;
