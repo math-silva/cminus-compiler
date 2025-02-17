@@ -14,6 +14,7 @@ typedef struct {
     char *name;
     int lines[LINE_SIZE];
     int line_count;
+    int param_count;
     SymbolKind kind;
     char *scope;
     ExpType type;

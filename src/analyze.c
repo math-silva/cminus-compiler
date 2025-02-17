@@ -55,18 +55,49 @@ static void insertNode(treeNode *t) {
                     break;
                 }
                 case CallK: {
-                    Symbol *sym = symtab_lookup_all_scope(t->attr.name);
-                    if (sym == NULL) {
+                    Symbol *fun = symtab_lookup_all_scope(t->attr.name);
+                    if (fun == NULL) {
                         snprintf(msg, sizeof(msg), "Undeclared function '\033[1;32m%s\033[1;37m'", t->attr.name);
                         symbolError(t, msg);
                         break;
-                    } else if (sym->kind != FUN) {
+                    } 
+                    if (fun->kind != FUN) {
                         snprintf(msg, sizeof(msg), "Called object '\033[1;32m%s\033[1;37m' is not a function", t->attr.name);
                         symbolError(t, msg);
                         break;
-                    } else {
-                        t->type = sym->type;
-                        insertLines(t->attr.name, t->lineno);
+                    }
+                    // Verifica quantidade de params e compara com fun->param_count
+                    t->type = fun->type;
+                    insertLines(t->attr.name, t->lineno);
+                    break;
+                }
+                case OpK: {
+                    Symbol *leftSide, *rightSide;
+                    if (t->children[0]->kind.exp == IdK || t->children[0]->kind.exp == CallK) {
+                        leftSide = symtab_lookup_all_scope(t->children[0]->attr.name);
+                        if (leftSide == NULL) {
+                            snprintf(msg, sizeof(msg), "Undeclared variable '\033[1;32m%s\033[1;37m' in the current scope", t->children[0]->attr.name);
+                            symbolError(t, msg);
+                            break;
+                        }
+                        if (leftSide->type == Void) {
+                            snprintf(msg, sizeof(msg), "Cannot use void type function in operation");
+                            typeError(t, msg);
+                            break;
+                        }
+                    }
+                    if (t->children[1]->kind.exp == IdK || t->children[1]->kind.exp == CallK) {
+                        rightSide = symtab_lookup_all_scope(t->children[1]->attr.name);
+                        if (rightSide == NULL) {
+                            snprintf(msg, sizeof(msg), "Undeclared variable '\033[1;32m%s\033[1;37m' in the current scope", t->children[1]->attr.name);
+                            symbolError(t, msg);
+                            break;
+                        }
+                        if (rightSide->type == Void) {
+                            snprintf(msg, sizeof(msg), "Cannot use void type function in operation");
+                            typeError(t, msg);
+                            break;
+                        }
                     }
                     break;
                 }
@@ -126,19 +157,19 @@ static void insertNode(treeNode *t) {
                     break;
                 }
                 case ParamK: {
-                    if (t->attr.name != NULL) {
-                        if (symtab_lookup(t->attr.name) != NULL) {
-                            snprintf(msg, sizeof(msg), "Parameter '\033[1;32m%s\033[1;37m' already declared", t->attr.name);
-                            symbolError(t, msg);
-                            break;
-                        }
-
-                        symtab_insert(t->attr.name, currScope()->name, VAR, t->type, t);
+                    if (symtab_lookup(t->attr.name) != NULL) {
+                        snprintf(msg, sizeof(msg), "Parameter '\033[1;32m%s\033[1;37m' already declared", t->attr.name);
+                        symbolError(t, msg);
+                        break;
                     }
+                    Symbol *fun = symtab_lookup_all_scope(currScope()->name);
+                    fun->param_count++;
+                    
+                    symtab_insert(t->attr.name, currScope()->name, VAR, t->type, t);
                     break;
                 }
                 case AssignK: {
-                    if (t->children[1]->type != Integer) {
+                    if (t->children[1]->kind.exp != OpK && t->children[1]->type != Integer) {
                         Symbol *assign = symtab_lookup_all_scope(t->children[1]->attr.name);
                         if (assign->type == Void) {
                             snprintf(msg, sizeof(msg), "Cannot assign void type variable");
@@ -171,6 +202,28 @@ static void insertNode(treeNode *t) {
                                 typeError(t, msg);
                                 break;
                             }
+                        }
+                    }
+                    break;
+                }
+                case WhileK: {
+                    if (t->children[0]->kind.exp != OpK && t->children[0]->kind.exp != ConstK) {
+                        Symbol *whileExp = symtab_lookup_all_scope(t->children[0]->attr.name);
+                        if (whileExp->type == Void) {
+                            snprintf(msg, sizeof(msg), "While condition must be a integer value");
+                            typeError(t, msg);
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case IfK: {
+                    if (t->children[0]->kind.exp != OpK && t->children[0]->kind.exp != ConstK) {
+                        Symbol *ifExp = symtab_lookup_all_scope(t->children[0]->attr.name);
+                        if (ifExp->type == Void) {
+                            snprintf(msg, sizeof(msg), "If condition must be a integer value");
+                            typeError(t, msg);
+                            break;
                         }
                     }
                     break;

@@ -68,6 +68,7 @@ void symtab_insert(char *name, char *scopeName, SymbolKind kind, ExpType type, t
     // symbol does not exist in the current scope
     Symbol *sym = &scope->symTab[scope->symbol_count++];
     sym->name = name;
+    sym->param_count = 0;
     sym->line_count = 0;
     sym->lines[sym->line_count++] = node->lineno;
     sym->kind = kind;

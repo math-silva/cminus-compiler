@@ -4,6 +4,9 @@ int gcd (int u, int v)
 }
 void main(void)
 {	int x; int y;
+	while (i < 10) {
+		i = i + 5;
+	}
 	x = input(); y = input();
-	output(gcd(x,y));
+	output(gcd(x));
 }
